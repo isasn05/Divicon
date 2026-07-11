@@ -24,74 +24,45 @@ RUN:
 
 from flask import Flask, request, jsonify
 from flask_cors import CORS
-import db  # your existing file — untouched, just imported and reused
+import db  # db.py file import
 
 app = Flask(__name__)
 
-# CORS = Cross-Origin Resource Sharing. Browsers block JS from calling a
-# different "origin" (domain/port) than the page itself, by default, for
-# security reasons. Since your frontend (e.g. localhost:3000) and this API
-# (localhost:5000) are different origins, CORS(app) tells the browser
-# "it's fine, let requests through." Without this line, every fetch() call
-# from the frontend would silently fail with a CORS error.
+# tells browser program is safe
 CORS(app)
 
+# ----------------------- USERS ----------------------------------------------
 
-# ---------------------------------------------------------------------------
-# HOW ROUTES WORK
-#
-# @app.route("/path", methods=["GET"]) is like registering a callback:
-# "whenever an HTTP request hits this URL with this method, run this
-# function." GET = "give me data" (like a read/SELECT). POST = "here's
-# data, create/do something with it" (like a write/INSERT).
-#
-# Anything in <angle_brackets> in the route is a variable pulled straight
-# from the URL — e.g. /accounts/<user_id> lets user_id be whatever the
-# caller puts there.
-# ---------------------------------------------------------------------------
-
-
-# ----------------------- ACCOUNTS -----------------------------------------
-
-@app.route("/accounts/<user_id>", methods=["GET"])
-def get_accounts(user_id):
-    # Just calls your existing db.py function and wraps the result as JSON.
-    # jsonify() converts a Python list/dict into a JSON string the
-    # frontend can parse — JSON is the common "language" both sides
-    # understand, even though Python calls it a dict and JS calls it an object.
-    return jsonify(db.get_accounts(user_id))
-
-
-@app.route("/accounts/<user_id>", methods=["POST"])
-def create_account(user_id):
-    # request.json parses the JSON body the frontend sent in its fetch()
-    # call, turning it back into a Python dict.
+@app.route("/users", methods=["POST"])
+def create_user():
     data = request.json
-    account_id = db.create_account(
-        user_id,
-        data["name"],
-        data["account_type"],
-        data.get("starting_balance", 0)  # .get() with a default, in case frontend omits it
-    )
-    return jsonify({"id": account_id})
+    try:
+        user_id = db.create_user(data["name"], data["email"])
+        return jsonify({"id": user_id})
+    except ValueError as e:
+        # str(e) pulls out the message passed to raise ValueError(...) in db.py
+        return jsonify({"error": str(e)}), 400
 
+
+@app.route("/users/<user_id>", methods=["GET"])
+def get_user(user_id):
+    try:
+        return jsonify(db.get_user(user_id))
+    except ValueError as e:
+        return jsonify({"error": str(e)}), 404
+
+@app.route("/users/<user_id>", methods=["PATCH"])
+def update_user(user_id):
+    data = request.json
+    try:
+        db.update_user(user_id, data)
+        return jsonify({"status": "updated"})
+    except ValueError as e:
+        return jsonify({"error": str(e)}), 400
+    
 
 # ----------------------- CATEGORIES ----------------------------------------
 
-@app.route("/categories/<user_id>", methods=["GET"])
-def get_categories(user_id):
-    return jsonify(db.get_categories(user_id))
-
-
-@app.route("/categories/<user_id>", methods=["POST"])
-def create_category(user_id):
-    data = request.json
-    category_id = db.create_category(
-        user_id,
-        data["name"],
-        data.get("monthly_budget")
-    )
-    return jsonify({"id": category_id})
 
 
 # ----------------------- TRANSACTIONS --------------------------------------
@@ -135,20 +106,4 @@ def delete_transaction(user_id, transaction_id):
     return jsonify({"status": "deleted"})
 
 
-# ----------------------- SUMMARY --------------------------------------------
-
-@app.route("/summary/<user_id>/<int:year>/<int:month>", methods=["GET"])
-def get_monthly_summary(user_id, year, month):
-    # <int:year> tells Flask to convert that URL segment straight to a
-    # Python int, instead of leaving it as a string — a small convenience.
-    return jsonify(db.get_monthly_summary(user_id, year, month))
-
-
-# ---------------------------------------------------------------------------
-# ENTRY POINT — only runs when you execute "python api.py" directly.
-# debug=True auto-restarts the server when you save changes, and shows
-# detailed errors in the browser — very handy for a hackathon, but turn
-# it off before anything resembling a public deploy.
-# ---------------------------------------------------------------------------
-if __name__ == "__main__":
-    app.run(debug=True, port=5000)
+# ----------------------- SUMMARY ----------------------------------------

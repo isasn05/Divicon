@@ -4,15 +4,15 @@ import firebase_admin
 from firebase_admin import credentials, firestore
 from datetime import datetime
 
-SERVICE_ACCOUNT_PATH = "divicondb-firebase-adminsdk-fbsvc-71fd022ae2.json"
-VALID_ACCOUNT_TYPES = ["checking", "savings", "credit"]
+SERVICE_ACCOUNT_PATH = "firebase-adminsdk.json"
+ALLOWED_USER_UPDATE_FIELDS = {"name", "email"}
 ALLOWED_UPDATE_FIELDS = {"amount", "category", "description"}
 
 cred = credentials.Certificate(SERVICE_ACCOUNT_PATH)
 firebase_admin.initialize_app(cred)
 db = firestore.client()
 
-# --- USERS --- 
+# ----------------------- USERS ----------------------------------------------
 
 # creates a new user for the database
 # RETURNS USER ID
@@ -49,12 +49,36 @@ def get_user(user_id):
         raise ValueError("No user found with that ID")
     return doc.to_dict() | {"id": doc.id}
 
+# updates user details, including: Name and email
+def update_user(user_id, updates):
+# checks for empty input
+    if not user_id or not isinstance(user_id, str):
+        raise ValueError("user_id must be a non-empty string")
+    if not isinstance(updates, dict) or not updates:
+        raise ValueError("updates must be a non-empty dict")
+# checks for valid update dict
+    invalid_fields = set(updates.keys()) - ALLOWED_USER_UPDATE_FIELDS
+    if invalid_fields:
+        raise ValueError(f"Invalid fields: {invalid_fields}")
+# check empty for updates
+    if "name" in updates and (not updates["name"] or not isinstance(updates["name"], str)):
+        raise ValueError("name must be a non-empty string")
+    if "email" in updates and (not updates["email"] or not isinstance(updates["email"], str)):
+        raise ValueError("email must be a non-empty string")
+# confirm user exists
+    doc_ref = db.collection("users").document(user_id)
+    if not doc_ref.get().exists:
+        raise ValueError("No user found with that ID")
+# update user
+        doc_ref.update(updates)
 
-# --- CATEGORIES --- 
+
+
+# ----------------------- CATEGORIES ----------------------------------------------
 
 
 
-# --- TRANSACTIONS ---
+# ----------------------- TRANSACTIONS ----------------------------------------------
 
 # adds a new transaction
 def add_transaction(user_id, amount, category, description=""):
@@ -97,4 +121,4 @@ def delete_transaction(user_id, transaction_id):
        .delete())
 
 
-#SUMMARY
+# ----------------------- SUMMARY ----------------------------------------------
