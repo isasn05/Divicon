@@ -354,7 +354,7 @@
         </div>
         <div class="roast">
           <div class="eyebrow">AI take</div>
-          <p id="roast-text"></p>
+          <p id="roast-text">Get AI to comment on purchases.</p>
         </div>
       </div>
 
@@ -391,7 +391,11 @@
 
 <script>
   const purchases = [
-
+    { date:'Jul 09', place:'Trader Joe\u2019s', sub:'Groceries', amt:62.14 },
+    { date:'Jul 08', place:'Shell', sub:'Gas', amt:41.02 },
+    { date:'Jul 07', place:'Blue Bottle Coffee', sub:'Coffee', amt:6.75 },
+    { date:'Jul 05', place:'Target', sub:'Household', amt:88.40 },
+    { date:'Jul 03', place:'Chipotle', sub:'Dining', amt:14.85 },
   ];
 
   const rowsEl = document.getElementById('rows');
@@ -406,7 +410,11 @@
   }
   render();
 
+<<<<<<< Updated upstream
+  //const GOOGLE_API_KEY = "AQ.Ab8RN6ISGk9PBqwHpR6VzzJTKQ9J1n6CKhTdwtjLezYlw39G9Q"; // hackathon only — don't publish this repo publicly
+=======
   //const GOOGLE_API_KEY = "AQ.Ab8RN6J-EkCZWCxpQklhkJYaD7Y5GrxrY3F7FI54RzAgjWSgew"; // Hehe, our funny API key isnt here, dont touch it or anything!
+>>>>>>> Stashed changes
 
   async function loadRoast(purchases) {
     const lines = purchases.map(p => `- ${p.date}: ${p.place} (${p.sub}) — $${p.amt.toFixed(2)}`).join('\n');
@@ -416,7 +424,7 @@
 
     try {
       const res = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GOOGLE_API_KEY}`,
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent?key=${GOOGLE_API_KEY}`,
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -426,6 +434,11 @@
         }
       );
       const data = await res.json();
+      if (data.error) {
+        console.error('Gemini API error:', data.error);
+        document.getElementById('roast-text').textContent = `API error: ${data.error.message}`;
+        return;
+      }
       const text = data.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
       document.getElementById('roast-text').textContent = text || "Couldn't think of anything mean enough.";
     } catch (err) {
