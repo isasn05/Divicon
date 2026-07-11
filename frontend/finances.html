@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>DnC — Finances</title>
+<title>ReceiptRoast — Finances</title>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=IBM+Plex+Mono:wght@400;500;600&family=Inter:wght@400;500;600&display=swap');
 
@@ -128,8 +128,8 @@
     position:relative;
     overflow:hidden;
   }
-  .ai-photo img{ width:100%; height:100%; object-fit:cover; display:none; }
-  .ai-photo .placeholder-icon{ width:34px; height:34px; }
+  .ai-photo img{ width:100%; height:100%; object-fit:cover; display:block; }
+  .ai-photo .placeholder-icon{ display:none; }
   .ai-photo .tag{
     position:absolute;
     bottom:0; left:0; right:0;
@@ -317,19 +317,6 @@
   .add-btn:active{ transform: translate(2px,2px); box-shadow: 2px 2px 0 rgba(36,18,38,0.25); }
   .add-btn svg{ width:16px; height:16px; }
 
-  /* upload view */
-  #upload-view{ display:none; }
-  .drop{
-    border:2px dashed var(--ink);
-    border-radius:14px;
-    background: var(--paper);
-    padding:40px 20px;
-    text-align:center;
-    color:#8B7690;
-  }
-  .drop svg{ width:34px; height:34px; margin-bottom:10px; color:var(--plum); }
-  .drop p{ font-size:14px; font-weight:500; color:var(--ink); margin-bottom:4px; }
-  .drop span{ font-size:12px; }
 </style>
 </head>
 <body>
@@ -360,11 +347,14 @@
         <div class="ai-photo">
           <img id="last-receipt-img" src="Nick.jpg" alt="Last scanned receipt">
           <svg class="placeholder-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">
+            <path d="M4 8h2l1.5-2h9L18 8h2a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1Z"/>
+            <circle cx="12" cy="13" r="3.5"/>
           </svg>
+          <div class="tag">last scan</div>
         </div>
         <div class="roast">
-          <div class="eyebrow">AI take</div>    
-          <p id="roast-text">Impliment later</p>
+          <div class="eyebrow">AI take</div>
+          <p id="roast-text">Get AI to comment on purchases.</p>
         </div>
       </div>
 
@@ -394,19 +384,6 @@
         </div>
       </div>
 
-      <button class="add-btn" id="add-purchase">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 5v14M5 12h14"/></svg>
-        Scan new receipt
-      </button>
-
-    </div>
-
-    <div id="upload-view">
-      <div class="drop" id="drop-zone">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 16V4m0 0 4 4m-4-4-4 4M4 16v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3"/></svg>
-        <p>Drop a receipt photo here</p>
-        <span>or tap to browse your camera roll</span>
-      </div>
     </div>
 
   </main>
@@ -443,10 +420,12 @@
   const tabs = document.querySelectorAll('nav button');
   tabs.forEach(btn => {
     btn.addEventListener('click', () => {
+      if (btn.dataset.view === 'upload-view') {
+        window.location.href = 'index.html';
+        return;
+      }
       tabs.forEach(b => b.classList.remove('active'));
       btn.classList.add('active');
-      document.getElementById('finance-view').style.display = btn.dataset.view === 'finance-view' ? 'block' : 'none';
-      document.getElementById('upload-view').style.display = btn.dataset.view === 'upload-view' ? 'block' : 'none';
     });
   });
 </script>
