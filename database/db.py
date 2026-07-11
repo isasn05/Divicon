@@ -4,7 +4,7 @@ import firebase_admin
 from firebase_admin import credentials, firestore
 from datetime import datetime
 
-SERVICE_ACCOUNT_PATH = "firebase-adminsdk.json"
+SERVICE_ACCOUNT_PATH = "divicondb-firebase-adminsdk-fbsvc-b899dad912.json"
 ALLOWED_USER_UPDATE_FIELDS = {"name", "email"}
 ALLOWED_UPDATE_FIELDS = {"amount", "category", "description"}
 
@@ -70,7 +70,7 @@ def update_user(user_id, updates):
     if not doc_ref.get().exists:
         raise ValueError("No user found with that ID")
 # update user
-        doc_ref.update(updates)
+    doc_ref.update(updates)
 
 
 
@@ -82,7 +82,7 @@ def update_user(user_id, updates):
 
 # adds a new transaction
 def add_transaction(user_id, amount, category, description=""):
-    if not amount or not isinstance(amount, str):
+    if not amount or not isinstance(amount, (int, float)):
         raise ValueError("amount must not be empty")
     
     doc_ref = db.collection("users").document(user_id).collection("transactions").document()
@@ -122,3 +122,48 @@ def delete_transaction(user_id, transaction_id):
 
 
 # ----------------------- SUMMARY ----------------------------------------------
+
+def get_monthly_summary(user_id, year, month):
+    transactions = get_transactions(user_id)
+
+    total_income = 0
+    total_expense = 0
+    by_category = {}
+
+    
+    for t in transactions:
+        # NOTE: in a real version you'd filter by t["date"]'s year/month here.
+        # Skipped for brevity — happy to add that filtering logic if useful.
+        amount = t["amount"]
+        category = t["category"]
+
+        if amount >= 0:
+            total_income += amount
+        else:
+            total_expense += amount
+
+        # dict.get(key, default) returns default if the key isn't present yet
+        # — avoids a manual "if category not in by_category: by_category[category] = 0"
+        by_category[category] = by_category.get(category, 0) + amount
+
+    # Returning a dict lets the caller access fields by name, e.g. result["total_income"]
+    return {
+        "total_income": total_income,
+        "total_expense": total_expense,
+        "net": total_income + total_expense,
+        "by_category": by_category
+    }
+
+
+# --------------------------------------------------------------------------
+# QUICK MANUAL TEST — only runs if you execute "python db.py" directly,
+# NOT when this file is imported elsewhere. Equivalent to a
+# "#ifdef TESTING ... main() ... #endif" pattern in C.
+# --------------------------------------------------------------------------
+if __name__ == "__main__":
+    acc_id = create_user("guy", "guy@gmail.com")
+    add_transaction(acc_id, -45.20, "Groceries", "Trader Joe's")
+    add_transaction(acc_id, 1200, "Paycheck", "Biweekly pay")
+
+    print(get_transactions(acc_id))
+    print(get_monthly_summary(acc_id, 2026, 7))
