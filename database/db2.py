@@ -51,6 +51,60 @@ db = firestore.client()
 
 
 # --------------------------------------------------------------------------
+# USERS
+# --------------------------------------------------------------------------
+
+def create_user(name, email):
+    """
+    Create a new user. Firestore generates a random, guaranteed-unique
+    document ID for us automatically — no need to build our own ID or
+    check for collisions. Returns the new user_id.
+    """
+    if not name or not isinstance(name, str):
+        raise ValueError("name must be a non-empty string")
+    if not email or not isinstance(email, str):
+        raise ValueError("email must be a non-empty string")
+
+    # .document() with NO argument = Firestore makes up a random ID for us.
+    # This is the same trick used for accounts/transactions elsewhere in
+    # this file — Firestore's own IDs are long and random enough that a
+    # collision is practically impossible, so there's no need to check.
+    doc_ref = db.collection("users").document()
+    doc_ref.set({
+        "name": name,
+        "email": email,
+        "created_at": firestore.SERVER_TIMESTAMP
+    })
+
+    # doc_ref.id is the ID Firestore just generated. This IS the user_id
+    # every other function in this file expects to be passed in.
+    return doc_ref.id
+
+
+def get_user(user_id):
+    """
+    Look up a user's info (name, email, etc.) by their ID. Raises a
+    ValueError if no user exists with that ID, instead of silently
+    returning nothing.
+    """
+    # .document(user_id).get() fetches ONE specific document directly by
+    # ID — much cheaper than a .where() query, since Firestore can go
+    # straight to it instead of searching.
+    doc = db.collection("users").document(user_id).get()
+
+    # .exists is a boolean — True only if a document was actually found
+    # at that path. A made-up or deleted user_id would fail this check.
+    if not doc.exists:
+        raise ValueError("No user found with that ID")
+
+    # to_dict() turns the document into a plain dict like
+    # {"name": "Alex", "email": "alex@email.com", "created_at": ...}.
+    # The "| {"id": doc.id}" merges in the ID itself, same pattern used
+    # elsewhere in this file, since to_dict() alone doesn't include it.
+    return doc.to_dict() | {"id": doc.id}
+
+
+# --------------------------------------------------------------------------
 # ACCOUNTS  (e.g. "Checking", "Savings", "Credit Card")
 # --------------------------------------------------------------------------
 

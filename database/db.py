@@ -5,20 +5,23 @@ from firebase_admin import credentials, firestore
 from datetime import datetime
 
 SERVICE_ACCOUNT_PATH = "divicondb-firebase-adminsdk-fbsvc-71fd022ae2.json"
+VALID_ACCOUNT_TYPES = ["checking", "savings", "credit"]
+ALLOWED_UPDATE_FIELDS = {"amount", "category", "description"}
+
 cred = credentials.Certificate(SERVICE_ACCOUNT_PATH)
 firebase_admin.initialize_app(cred)
 db = firestore.client()
 
-#USERS
+# --- USERS --- 
 
 # creates a new user for the database
 # RETURNS USER ID
 def create_user(name, email):
 # check for no input
     if not name or not isinstance(name, str):
-        raise ValueError("name must be a non-empty string")
+        raise ValueError("name must not be empty")
     if not email or not isinstance(email, str):
-        raise ValueError("email must be a non-empty string")
+        raise ValueError("email must not be empty")
 # check for duplicate emails
     if email_exists(email):
         raise ValueError("An account with this email already exists")
@@ -34,39 +37,64 @@ def create_user(name, email):
 
 # checks if entered email is already entered into the database
 def email_exists(email):
-    """Check if any user document already has this email."""
     docs = db.collection("users").where("email", "==", email).limit(1).stream()
 
     results = list(docs)
     return len(results) > 0
 
+# returns doc with user deatails
+def get_user(user_id):
+    doc = db.collection("users").document(user_id).get()
+    if not doc.exists:
+        raise ValueError("No user found with that ID")
+    return doc.to_dict() | {"id": doc.id}
 
 
-#ACCOUNTS
-#functions for adding different accounts like checking, credit, savings, etc.
+# --- CATEGORIES --- 
 
-def create_account(user_id, name, account_type, starting_balance=0):
-    doc_ref = db.collection("users").document(user_id).collection("accounts").document()
 
+
+# --- TRANSACTIONS ---
+
+# adds a new transaction
+def add_transaction(user_id, amount, category, description=""):
+    if not amount or not isinstance(amount, str):
+        raise ValueError("amount must not be empty")
+    
+    doc_ref = db.collection("users").document(user_id).collection("transactions").document()
     doc_ref.set({
-        "name": name,
-        "type": account_type,
-        "balance": starting_balance,              # Default is zero
-        "created_at": firestore.SERVER_TIMESTAMP  # Firebase fills in the real time
+        "amount": amount,
+        "category": category,
+        "description": description,
+        "date": firestore.SERVER_TIMESTAMP
     })
-
-    # doc_ref.id is the auto-generated ID Firestore just created.
     return doc_ref.id
 
+# returns existing transactions in descecnding order by date
+def get_transactions(user_id):
+    docs = (
+        db.collection("users").document(user_id).collection("transactions")
+        .order_by("date", direction=firestore.Query.DESCENDING)
+        .stream()
+    )
+    return [doc.to_dict() | {"id": doc.id} for doc in docs]
 
-
-#CATEGORIES
-
-
-
-#TRANSACTIONS
-
-
+# update an existing transaction
+# example: update_transaction("user_123", "tx_456", {"amount": -45.20, "category": "Groceries", "description": "Trader Joe's"})
+def update_transaction(user_id, transaction_id, updates):
+# check if updates are valid
+    invalid_fields = set(updates.keys()) - ALLOWED_UPDATE_FIELDS
+    if invalid_fields:
+        raise ValueError(f"Invalid fields: {invalid_fields}")
+    (db.collection("users").document(user_id)
+       .collection("transactions").document(transaction_id)
+       .update(updates))
+    
+# deletes an existing transaction
+def delete_transaction(user_id, transaction_id):
+    (db.collection("users").document(user_id)
+       .collection("transactions").document(transaction_id)
+       .delete())
 
 
 #SUMMARY
