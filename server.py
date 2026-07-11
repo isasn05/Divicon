@@ -70,7 +70,9 @@ import base64
 import json
 import sys
 from pathlib import Path
+import pytesseract
 
+pytesseract.pytesseract.tesseract_cmd = r"C:\Program Files\Tesseract-OCR\tesseract.exe"
 from flask import Flask, request, jsonify, send_from_directory
 
 # Add backend folder to Python path
