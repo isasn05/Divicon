@@ -24,7 +24,7 @@ RUN:
 
 from flask import Flask, request, jsonify
 from flask_cors import CORS
-import dbT  # your existing file — untouched, just imported and reused
+import db  # your existing file — untouched, just imported and reused
 
 app = Flask(__name__)
 
@@ -51,42 +51,39 @@ CORS(app)
 # ---------------------------------------------------------------------------
 
 
-# ----------------------- ACCOUNTS -----------------------------------------
+# ----------------------- USERS ----------------------------------------------
 
-@app.route("/accounts/<user_id>", methods=["GET"])
-def get_accounts(user_id):
-    # Just calls your existing db.py function and wraps the result as JSON.
-    # jsonify() converts a Python list/dict into a JSON string the
-    # frontend can parse — JSON is the common "language" both sides
-    # understand, even though Python calls it a dict and JS calls it an object.
-    return jsonify(dbT.get_accounts(user_id))
-
-
-@app.route("/accounts/<user_id>", methods=["POST"])
-def create_account(user_id):
-    # request.json parses the JSON body the frontend sent in its fetch()
-    # call, turning it back into a Python dict.
+@app.route("/users", methods=["POST"])
+def create_user():
     data = request.json
-    account_id = dbT.create_account(
-        user_id,
-        data["name"],
-        data["account_type"],
-        data.get("starting_balance", 0)  # .get() with a default, in case frontend omits it
-    )
-    return jsonify({"id": account_id})
+    try:
+        user_id = db.create_user(data["name"], data["email"])
+        return jsonify({"id": user_id})
+    except ValueError as e:
+        # str(e) pulls out the message passed to raise ValueError(...) in db.py
+        return jsonify({"error": str(e)}), 400
+
+
+@app.route("/users/<user_id>", methods=["GET"])
+def get_user(user_id):
+    try:
+        return jsonify(db.get_user(user_id))
+    except ValueError as e:
+        # 404 = "Not Found" — the standard status for "no such resource"
+        return jsonify({"error": str(e)}), 404
 
 
 # ----------------------- CATEGORIES ----------------------------------------
 
 @app.route("/categories/<user_id>", methods=["GET"])
 def get_categories(user_id):
-    return jsonify(dbT.get_categories(user_id))
+    return jsonify(db.get_categories(user_id))
 
 
 @app.route("/categories/<user_id>", methods=["POST"])
 def create_category(user_id):
     data = request.json
-    category_id = dbT.create_category(
+    category_id = db.create_category(
         user_id,
         data["name"],
         data.get("monthly_budget")
@@ -103,14 +100,14 @@ def get_transactions(user_id):
     category = request.args.get("category")
 
     if category:
-        return jsonify(dbT.get_transactions_by_category(user_id, category))
-    return jsonify(dbT.get_transactions(user_id))
+        return jsonify(db.get_transactions_by_category(user_id, category))
+    return jsonify(db.get_transactions(user_id))
 
 
 @app.route("/transactions/<user_id>", methods=["POST"])
 def add_transaction(user_id):
     data = request.json
-    tx_id = dbT.add_transaction(
+    tx_id = db.add_transaction(
         user_id,
         data["account_id"],
         data["amount"],
@@ -125,13 +122,13 @@ def update_transaction(user_id, transaction_id):
     # PATCH = "partially update an existing thing" — standard REST convention
     # for updates, as opposed to POST (create) or DELETE (remove).
     updates = request.json
-    dbT.update_transaction(user_id, transaction_id, updates)
+    db.update_transaction(user_id, transaction_id, updates)
     return jsonify({"status": "updated"})
 
 
 @app.route("/transactions/<user_id>/<transaction_id>", methods=["DELETE"])
 def delete_transaction(user_id, transaction_id):
-    dbT.delete_transaction(user_id, transaction_id)
+    db.delete_transaction(user_id, transaction_id)
     return jsonify({"status": "deleted"})
 
 
@@ -141,7 +138,7 @@ def delete_transaction(user_id, transaction_id):
 def get_monthly_summary(user_id, year, month):
     # <int:year> tells Flask to convert that URL segment straight to a
     # Python int, instead of leaving it as a string — a small convenience.
-    return jsonify(dbT.get_monthly_summary(user_id, year, month))
+    return jsonify(db.get_monthly_summary(user_id, year, month))
 
 
 # ---------------------------------------------------------------------------
