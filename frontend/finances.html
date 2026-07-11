@@ -354,22 +354,22 @@
         </div>
         <div class="roast">
           <div class="eyebrow">AI take</div>
-          <p id="roast-text">Get AI to comment on purchases.</p>
+          <p id="roast-text"></p>
         </div>
       </div>
 
       <div class="summary">
         <div class="stat spend">
-          <div class="label">This month</div>
-          <div class="value">$482.19</div>
+          <div class="label">This Month</div>
+          <div class="value">$</div>
         </div>
         <div class="stat">
           <div class="label">Receipts</div>
-          <div class="value">14</div>
+          <div class="value"></div>
         </div>
         <div class="stat">
           <div class="label">Avg / trip</div>
-          <div class="value">$34.44</div>
+          <div class="value">$</div>
         </div>
       </div>
 
@@ -391,11 +391,7 @@
 
 <script>
   const purchases = [
-    { date:'Jul 09', place:'Trader Joe\u2019s', sub:'Groceries', amt:62.14 },
-    { date:'Jul 08', place:'Shell', sub:'Gas', amt:41.02 },
-    { date:'Jul 07', place:'Blue Bottle Coffee', sub:'Coffee', amt:6.75 },
-    { date:'Jul 05', place:'Target', sub:'Household', amt:88.40 },
-    { date:'Jul 03', place:'Chipotle', sub:'Dining', amt:14.85 },
+
   ];
 
   const rowsEl = document.getElementById('rows');
@@ -410,12 +406,34 @@
   }
   render();
 
-  document.getElementById('add-purchase').addEventListener('click', () => {
-    const p = { date:'Jul 10', place:'Sample Store', sub:'New scan', amt: +(Math.random()*60+5).toFixed(2) };
-    purchases.unshift(p);
-    render();
-    document.getElementById('roast-text').textContent = roasts[Math.floor(Math.random()*roasts.length)];
-  });
+  //const GOOGLE_API_KEY = "AQ.Ab8RN6J-EkCZWCxpQklhkJYaD7Y5GrxrY3F7FI54RzAgjWSgew"; // Hehe, our funny API key isnt here, dont touch it or anything!
+
+  async function loadRoast(purchases) {
+    const lines = purchases.map(p => `- ${p.date}: ${p.place} (${p.sub}) — $${p.amt.toFixed(2)}`).join('\n');
+    const prompt = `You're a sterotypical "finance bro" who loves talking about making money.  Your job is to look at the most recent purchases and
+    critique what the user has bought.  Specifically, you should talk about how much they could have made if they invested into yesterdays most profitable stock. 
+    Keep it short (1-2 sentences), playful, not mean-spirited, no profanity. Here are their recent purchases:\n\n${lines}\n\nWrite the roast:`;
+
+    try {
+      const res = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GOOGLE_API_KEY}`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            contents: [{ parts: [{ text: prompt }] }]
+          })
+        }
+      );
+      const data = await res.json();
+      const text = data.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
+      document.getElementById('roast-text').textContent = text || "Couldn't think of anything mean enough.";
+    } catch (err) {
+      document.getElementById('roast-text').textContent = "Couldn't reach the roast machine.";
+    }
+  }
+
+  loadRoast(purchases);
 
   const tabs = document.querySelectorAll('nav button');
   tabs.forEach(btn => {
