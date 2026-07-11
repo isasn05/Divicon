@@ -1,0 +1,433 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>ReceiptRoast — Finances</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=IBM+Plex+Mono:wght@400;500;600&family=Inter:wght@400;500;600&display=swap');
+
+  :root{
+    --lavender: #E9C9EA;
+    --lavender-deep: #D9AEDD;
+    --plum: #7A3B94;
+    --violet: #9B5DC0;
+    --ink: #241226;
+    --paper: #FBF6FC;
+    --paper-line: #E4D3E8;
+    --good: #3E7A4F;
+    --bad: #B4432F;
+  }
+
+  *{box-sizing:border-box; margin:0; padding:0;}
+  html,body{height:100%;}
+  body{
+    font-family:'Inter', sans-serif;
+    background: var(--lavender);
+    color: var(--ink);
+    min-height:100vh;
+    display:flex;
+    justify-content:center;
+  }
+  .app{
+    width:100%;
+    max-width:480px;
+    min-height:100vh;
+    background: var(--lavender);
+    display:flex;
+    flex-direction:column;
+  }
+
+  /* ---------- sticky header ---------- */
+  header{
+    position:sticky;
+    top:0;
+    z-index:10;
+    background: var(--paper);
+    border-bottom: 2px solid var(--ink);
+    padding: 14px 16px 0;
+  }
+  .brand-row{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    margin-bottom:12px;
+  }
+  .brand-mark{
+    width:30px; height:30px;
+    background: var(--plum);
+    border-radius:7px;
+    display:flex; align-items:center; justify-content:center;
+    color:var(--paper);
+    font-family:'Space Grotesk', sans-serif;
+    font-weight:700;
+    font-size:15px;
+    transform: rotate(-4deg);
+  }
+  .brand-name{
+    font-family:'Space Grotesk', sans-serif;
+    font-weight:700;
+    font-size:17px;
+    letter-spacing:-0.01em;
+  }
+  .brand-name span{ color:var(--plum); }
+
+  nav{
+    display:flex;
+    gap:4px;
+  }
+  nav button{
+    flex:1;
+    font-family:'Inter', sans-serif;
+    font-weight:600;
+    font-size:13px;
+    padding:10px 4px;
+    background:none;
+    border:none;
+    border-bottom:3px solid transparent;
+    color:#8B7690;
+    cursor:pointer;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    gap:6px;
+    transition: color .15s ease;
+  }
+  nav button svg{width:16px; height:16px; opacity:.7;}
+  nav button.active{
+    color: var(--ink);
+    border-bottom-color: var(--plum);
+  }
+  nav button.active svg{opacity:1;}
+
+  /* ---------- main ---------- */
+  main{ padding:18px 16px 40px; flex:1; }
+
+  .card{
+    background: var(--paper);
+    border:2px solid var(--ink);
+    border-radius:14px;
+    box-shadow: 4px 4px 0 rgba(36,18,38,0.15);
+  }
+
+  /* AI snapshot row */
+  .snapshot-row{
+    display:flex;
+    gap:12px;
+    margin-bottom:16px;
+  }
+  .ai-photo{
+    width:96px; height:96px;
+    border-radius:50%;
+    flex-shrink:0;
+    background: var(--lavender-deep);
+    border:2px solid var(--ink);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    color:var(--plum);
+    position:relative;
+    overflow:hidden;
+  }
+  .ai-photo img{ width:100%; height:100%; object-fit:cover; display:block; }
+  .ai-photo .placeholder-icon{ display:none; }
+  .ai-photo .tag{
+    position:absolute;
+    bottom:0; left:0; right:0;
+    background: var(--ink);
+    color:var(--paper);
+    font-size:9px;
+    font-weight:600;
+    letter-spacing:.04em;
+    text-align:center;
+    padding:2px 0;
+    text-transform:uppercase;
+  }
+
+  .roast{
+    flex:1;
+    background: var(--paper);
+    border:2px solid var(--ink);
+    border-radius:14px;
+    padding:12px 14px;
+    position:relative;
+    display:flex;
+    flex-direction:column;
+    justify-content:center;
+    box-shadow: 4px 4px 0 rgba(36,18,38,0.15);
+  }
+  .roast::before{
+    content:"";
+    position:absolute;
+    left:-9px; top:22px;
+    width:0; height:0;
+    border-top:8px solid transparent;
+    border-bottom:8px solid transparent;
+    border-right:9px solid var(--ink);
+  }
+  .roast::after{
+    content:"";
+    position:absolute;
+    left:-6.5px; top:22px;
+    width:0; height:0;
+    border-top:8px solid transparent;
+    border-bottom:8px solid transparent;
+    border-right:9px solid var(--paper);
+  }
+  .roast .eyebrow{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:10px;
+    text-transform:uppercase;
+    letter-spacing:.06em;
+    color:var(--plum);
+    font-weight:600;
+    margin-bottom:4px;
+  }
+  .roast p{
+    font-size:13.5px;
+    line-height:1.4;
+    font-weight:500;
+  }
+
+  /* summary strip */
+  .summary{
+    display:flex;
+    gap:10px;
+    margin-bottom:16px;
+  }
+  .summary .stat{
+    flex:1;
+    background: var(--paper);
+    border:2px solid var(--ink);
+    border-radius:12px;
+    padding:10px 12px;
+    box-shadow: 3px 3px 0 rgba(36,18,38,0.15);
+  }
+  .summary .stat .label{
+    font-size:10.5px;
+    color:#8B7690;
+    font-weight:600;
+    text-transform:uppercase;
+    letter-spacing:.03em;
+    margin-bottom:2px;
+  }
+  .summary .stat .value{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:17px;
+    font-weight:600;
+  }
+  .summary .stat.spend .value{ color:var(--bad); }
+
+  /* purchases receipt card */
+  .receipt-head{
+    display:flex;
+    align-items:baseline;
+    justify-content:space-between;
+    margin-bottom:8px;
+  }
+  .receipt-head h2{
+    font-family:'Space Grotesk', sans-serif;
+    font-size:15px;
+    font-weight:700;
+  }
+  .receipt-head .count{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:11px;
+    color:#8B7690;
+  }
+
+  .receipt{
+    padding:4px 0 6px;
+    overflow:hidden;
+    position:relative;
+  }
+  .receipt::before, .receipt::after{
+    content:"";
+    display:block;
+    height:10px;
+    background-image: radial-gradient(circle at 6px 5px, var(--lavender) 5px, transparent 5.5px);
+    background-size: 14px 10px;
+    background-repeat: repeat-x;
+    background-position: -3px 0;
+  }
+  .receipt-cols{
+    display:grid;
+    grid-template-columns: 68px 1fr 64px;
+    gap:6px;
+    padding:8px 16px 6px;
+    font-size:10px;
+    font-weight:600;
+    text-transform:uppercase;
+    letter-spacing:.03em;
+    color:#8B7690;
+    border-bottom:1.5px dashed var(--paper-line);
+  }
+  .receipt-cols span:last-child{ text-align:right; }
+
+  .row{
+    display:grid;
+    grid-template-columns: 68px 1fr 64px;
+    gap:6px;
+    align-items:center;
+    padding:11px 16px;
+    border-bottom:1px dashed var(--paper-line);
+    font-family:'IBM Plex Mono', monospace;
+  }
+  .row:last-of-type{ border-bottom:none; }
+  .row .date{ font-size:11.5px; color:#8B7690; }
+  .row .place{
+    font-family:'Inter', sans-serif;
+    font-weight:500;
+    font-size:13.5px;
+    white-space:nowrap;
+    overflow:hidden;
+    text-overflow:ellipsis;
+  }
+  .row .place small{
+    display:block;
+    font-family:'IBM Plex Mono', monospace;
+    font-size:10px;
+    color:#8B7690;
+    font-weight:400;
+  }
+  .row .amt{
+    text-align:right;
+    font-weight:600;
+    font-size:13.5px;
+  }
+
+  .add-btn{
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    gap:6px;
+    width:100%;
+    margin-top:14px;
+    padding:13px;
+    background: var(--plum);
+    color: var(--paper);
+    border:2px solid var(--ink);
+    border-radius:12px;
+    font-family:'Inter', sans-serif;
+    font-weight:600;
+    font-size:14px;
+    cursor:pointer;
+    box-shadow: 4px 4px 0 rgba(36,18,38,0.25);
+    transition: transform .1s ease;
+  }
+  .add-btn:active{ transform: translate(2px,2px); box-shadow: 2px 2px 0 rgba(36,18,38,0.25); }
+  .add-btn svg{ width:16px; height:16px; }
+
+</style>
+</head>
+<body>
+<div class="app">
+
+  <header>
+    <div class="brand-row">
+      <div class="brand-mark">R</div>
+      <div class="brand-name">Receipt<span>Roast</span></div>
+    </div>
+    <nav>
+      <button class="active" data-view="finance-view" id="tab-finance">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 10h18M7 15h2m4 0h4M5 6h14a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2Z"/></svg>
+        Finances
+      </button>
+      <button data-view="upload-view" id="tab-upload">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 16V4m0 0 4 4m-4-4-4 4M4 16v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3"/></svg>
+        Upload
+      </button>
+    </nav>
+  </header>
+
+  <main>
+
+    <div id="finance-view">
+
+      <div class="snapshot-row">
+        <div class="ai-photo">
+          <img id="last-receipt-img" src="Nick.jpg" alt="Last scanned receipt">
+          <svg class="placeholder-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">
+            <path d="M4 8h2l1.5-2h9L18 8h2a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1Z"/>
+            <circle cx="12" cy="13" r="3.5"/>
+          </svg>
+          <div class="tag">last scan</div>
+        </div>
+        <div class="roast">
+          <div class="eyebrow">AI take</div>
+          <p id="roast-text">Get AI to comment on purchases.</p>
+        </div>
+      </div>
+
+      <div class="summary">
+        <div class="stat spend">
+          <div class="label">This month</div>
+          <div class="value">$482.19</div>
+        </div>
+        <div class="stat">
+          <div class="label">Receipts</div>
+          <div class="value">14</div>
+        </div>
+        <div class="stat">
+          <div class="label">Avg / trip</div>
+          <div class="value">$34.44</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="receipt">
+          <div class="receipt-cols">
+            <span>Date</span>
+            <span>Location / company</span>
+            <span>$$$</span>
+          </div>
+          <div id="rows"></div>
+        </div>
+      </div>
+
+    </div>
+
+  </main>
+</div>
+
+<script>
+  const purchases = [
+    { date:'Jul 09', place:'Trader Joe\u2019s', sub:'Groceries', amt:62.14 },
+    { date:'Jul 08', place:'Shell', sub:'Gas', amt:41.02 },
+    { date:'Jul 07', place:'Blue Bottle Coffee', sub:'Coffee', amt:6.75 },
+    { date:'Jul 05', place:'Target', sub:'Household', amt:88.40 },
+    { date:'Jul 03', place:'Chipotle', sub:'Dining', amt:14.85 },
+  ];
+
+  const rowsEl = document.getElementById('rows');
+  function render(){
+    rowsEl.innerHTML = purchases.map(p => `
+      <div class="row">
+        <div class="date">${p.date}</div>
+        <div class="place">${p.place}<small>${p.sub}</small></div>
+        <div class="amt">$${p.amt.toFixed(2)}</div>
+      </div>
+    `).join('');
+  }
+  render();
+
+  document.getElementById('add-purchase').addEventListener('click', () => {
+    const p = { date:'Jul 10', place:'Sample Store', sub:'New scan', amt: +(Math.random()*60+5).toFixed(2) };
+    purchases.unshift(p);
+    render();
+    document.getElementById('roast-text').textContent = roasts[Math.floor(Math.random()*roasts.length)];
+  });
+
+  const tabs = document.querySelectorAll('nav button');
+  tabs.forEach(btn => {
+    btn.addEventListener('click', () => {
+      if (btn.dataset.view === 'upload-view') {
+        window.location.href = 'index.html';
+        return;
+      }
+      tabs.forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+    });
+  });
+</script>
+</body>
+</html>
