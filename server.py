@@ -86,12 +86,17 @@ FRONTEND_DIR = Path(__file__).resolve().parent / "frontend"
 
 @app.route("/")
 def index():
-    """Serve the main camera page"""
+    """Serve the finances page as the homepage"""
+    return send_from_directory(str(FRONTEND_DIR), "finances.html")
+
+@app.route("/scanner")
+def scanner():
+    """Serve the camera scanner page"""
     return send_from_directory(str(FRONTEND_DIR), "index.html")
 
 @app.route("/finances")
 def finances():
-    """Serve the finances page"""
+    """Serve the finances page (redirect or serve directly)"""
     return send_from_directory(str(FRONTEND_DIR), "finances.html")
 
 @app.route("/camera.js")
@@ -128,8 +133,8 @@ def serve_static(path):
     return send_from_directory("frontend", path)
 
 if __name__ == "__main__":
-    print("\n  🔥 Receipt Scanner running at http://localhost:5000")
-    print("  📸 Open the camera at http://localhost:5000")
-    print("  💰 View finances at http://localhost:5000/finances")
-    print("  📱 On phone: http://172.20.10.12:5000 (if on same network)\n")
+    # print("\nReceipt Scanner running at http://localhost:5000")
+    print("Finances page: http://localhost:5000")
+    # print("Scanner page: http://localhost:5000/scanner")
+    # print("On phone: http://172.20.10.12:5000 (if on same network)\n")
     app.run(debug=True, host="0.0.0.0", port=5000)
