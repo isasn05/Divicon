@@ -83,12 +83,18 @@ def add_transaction(user_id):
     data = request.json
     tx_id = db.add_transaction(
         user_id,
-        data["account_id"],
         data["amount"],
         data["category"],
-        data.get("description", "")
+        data.get("description", ""),
+        merchant=data.get("merchant"),
+        receipt_date=data.get("receipt_date"),
     )
     return jsonify({"id": tx_id})
+
+
+@app.route("/summary/<user_id>", methods=["GET"])
+def summary(user_id):
+    return jsonify(db.get_summary(user_id))
 
 
 @app.route("/transactions/<user_id>/<transaction_id>", methods=["PATCH"])

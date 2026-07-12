@@ -2,7 +2,12 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
+<<<<<<< Updated upstream
 <title>Picchi — Finances</title>
+=======
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ReceiptRoast — Finances</title>
+>>>>>>> Stashed changes
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=IBM+Plex+Mono:wght@400;500;600&family=Inter:wght@400;500;600&display=swap');
 
@@ -361,15 +366,15 @@
       <div class="summary">
         <div class="stat spend">
           <div class="label">This Month</div>
-          <div class="value">$</div>
+          <div class="value" id="stat-month">$0</div>
         </div>
         <div class="stat">
           <div class="label">Receipts</div>
-          <div class="value"></div>
+          <div class="value" id="stat-receipts">0</div>
         </div>
         <div class="stat">
           <div class="label">Avg / trip</div>
-          <div class="value">$</div>
+          <div class="value" id="stat-avg">$0</div>
         </div>
       </div>
 
@@ -390,25 +395,56 @@
 </div>
 
 <script>
-  const purchases = [
-    { date:'Jul 09', place:'Trader Joe\u2019s', sub:'Groceries', amt:62.14 },
-    { date:'Jul 08', place:'Shell', sub:'Gas', amt:41.02 },
-    { date:'Jul 07', place:'Blue Bottle Coffee', sub:'Coffee', amt:6.75 },
-    { date:'Jul 05', place:'Target', sub:'Household', amt:88.40 },
-    { date:'Jul 03', place:'Chipotle', sub:'Dining', amt:14.85 },
-  ];
+  // Was hardcoded sample data — now loaded live from the database via
+  // loadFinances() below, which calls /api/summary (see server.py).
+  let purchases = [];
 
   const rowsEl = document.getElementById('rows');
   function render(){
-    rowsEl.innerHTML = purchases.map(p => `
-      <div class="row">
-        <div class="date">${p.date}</div>
-        <div class="place">${p.place}<small>${p.sub}</small></div>
-        <div class="amt">$${p.amt.toFixed(2)}</div>
-      </div>
-    `).join('');
+    rowsEl.innerHTML = purchases.length
+      ? purchases.map(p => `
+        <div class="row">
+          <div class="date">${p.date}</div>
+          <div class="place">${p.place}<small>${p.sub}</small></div>
+          <div class="amt">$${p.amt.toFixed(2)}</div>
+        </div>
+      `).join('')
+      : '<div class="row"><span class="label">No receipts scanned yet</span></div>';
   }
   render();
+
+  function fmtDate(iso) {
+    if (!iso) return '—';
+    const d = new Date(iso);
+    if (isNaN(d)) return iso;
+    return d.toLocaleDateString(undefined, { month: 'short', day: '2-digit' });
+  }
+
+  async function loadFinances() {
+    try {
+      const res = await fetch('/api/summary');
+      const data = await res.json();
+
+      document.getElementById('stat-month').textContent =
+        `$${(data.this_month_total ?? 0).toFixed(2)}`;
+      document.getElementById('stat-receipts').textContent =
+        data.receipt_count ?? 0;
+      document.getElementById('stat-avg').textContent =
+        `$${(data.avg_per_trip ?? 0).toFixed(2)}`;
+
+      purchases = (data.transactions || []).map(t => ({
+        date: fmtDate(t.receipt_date || t.date),
+        place: t.merchant || t.description || 'Unknown',
+        sub: t.category || '',
+        amt: Math.abs(t.amount || 0),
+      }));
+      render();
+      loadRoast(purchases);
+    } catch (err) {
+      console.error('Could not load finances:', err);
+      render();
+    }
+  }
 
   //const GOOGLE_API_KEY = "AQ.Ab8RN6J-EkCZWCxpQklhkJYaD7Y5GrxrY3F7FI54RzAgjWSgew"; // Hehe, our funny API key isnt here, dont touch it or anything!
 
@@ -442,7 +478,7 @@
     }
   }
 
-  loadRoast(purchases);
+  loadFinances();
 
   const tabs = document.querySelectorAll('nav button');
   tabs.forEach(btn => {

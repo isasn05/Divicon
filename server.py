@@ -68,18 +68,43 @@ Camera test server - Windows compatible
 
 import base64
 import json
+import shutil
 import sys
 from pathlib import Path
 import pytesseract
 
-pytesseract.pytesseract.tesseract_cmd = r"C:\Program Files\Tesseract-OCR\tesseract.exe"
+# Only point pytesseract at the Windows install path if tesseract isn't
+# already on PATH (e.g. it was installed some other way, or this is running
+# on Mac/Linux/a deployment host) — hardcoding this broke non-Windows setups.
+if not shutil.which("tesseract"):
+    _windows_tesseract = Path(r"C:\Program Files\Tesseract-OCR\tesseract.exe")
+    if _windows_tesseract.exists():
+        pytesseract.pytesseract.tesseract_cmd = str(_windows_tesseract)
+
 from flask import Flask, request, jsonify, send_from_directory
 
 # Add backend folder to Python path
 sys.path.insert(0, str(Path(__file__).resolve().parent / "backend"))
+# Add database folder to Python path so we can import db.py from here too
+sys.path.insert(0, str(Path(__file__).resolve().parent / "database"))
 
 # Now we can import from backend
 from backend import scan_receipt
+
+# The database connection needs a real Firebase service-account key (see
+# database/db.py) which isn't committed to the repo. If it's missing, we
+# still let the scanner run — it just won't save anything, and /api/summary
+# will report itself as unavailable instead of crashing the whole server.
+try:
+    import db
+    DEFAULT_USER_ID = db.get_or_create_default_user()
+    DB_ENABLED = True
+    print(f"[db] connected — saving receipts under user {DEFAULT_USER_ID}")
+except Exception as exc:
+    db = None
+    DEFAULT_USER_ID = None
+    DB_ENABLED = False
+    print(f"[db] not connected ({exc}) — receipts will scan but won't be saved.")
 
 app = Flask(__name__, static_folder="frontend", static_url_path="")
 
@@ -113,7 +138,7 @@ def nick_image():
 
 @app.route("/api/scan", methods=["POST"])
 def scan():
-    """Handle receipt scanning"""
+    """Handle receipt scanning, then save the result to the database."""
     body = request.get_json(silent=True) or {}
     data_url = body.get("image", "")
     
@@ -127,7 +152,42 @@ def scan():
                         "message": "Bad base64", "hint": "Try again."}), 400
     
     result = scan_receipt(raw)
+
+    if result.get("ok") and DB_ENABLED:
+        r = result["receipt"]
+        total_val = r["total"]["value"] or r["items_sum"] or None
+        if total_val:
+            try:
+                merchant_val = r["merchant"]["value"] or "Unknown merchant"
+                tx_id = db.add_transaction(
+                    DEFAULT_USER_ID,
+                    amount=-abs(total_val),       # negative = money spent
+                    category="Groceries",
+                    description=merchant_val,
+                    merchant=merchant_val,
+                    receipt_date=r["date"]["value"],
+                )
+                result["saved_transaction_id"] = tx_id
+            except Exception as exc:
+                result["save_error"] = str(exc)
+        else:
+            result["save_error"] = "Couldn't find a total on the receipt, so nothing was saved."
+    elif result.get("ok") and not DB_ENABLED:
+        result["save_error"] = "Database isn't connected — see server logs."
+
     return jsonify(result)
+
+
+@app.route("/api/summary")
+def summary():
+    """Real-time totals + purchase history for finances.html."""
+    if not DB_ENABLED:
+        return jsonify({
+            "error": "database_unavailable",
+            "transactions": [], "this_month_total": 0,
+            "receipt_count": 0, "avg_per_trip": 0,
+        }), 503
+    return jsonify(db.get_summary(DEFAULT_USER_ID))
 
 @app.route("/<path:path>")
 def serve_static(path):
