@@ -292,14 +292,23 @@ async function sendToScanner(dataUrl) {
 
     if (!data.ok) {
       setStatus(`${data.error}: ${data.message} — ${data.hint}`, true);
-      renderRawJSON(data);
+      resultsEl.innerHTML = "";
       return;
     }
+<<<<<<< HEAD
     lastResult = data;
     btnSave.hidden = false;
     btnSave.disabled = false;
     btnSave.textContent = "Save to finances";
     setStatus(`Done — OCR confidence ${data.ocr.mean_confidence}%. Save it, or retake.`);
+=======
+<<<<<<< Updated upstream
+    setStatus(`Done`);
+=======
+
+    setStatus(data.saved_transaction_id ? "Saved to your Finances." : "Scan complete.");
+>>>>>>> Stashed changes
+>>>>>>> bafecaf8c8a91d4d67b7b5fe8784fcd7ced5e9c7
     renderResults(data);
   } catch (err) {
     setStatus(`Network error: ${err.message}`, true);
@@ -309,54 +318,46 @@ async function sendToScanner(dataUrl) {
 }
 
 // ----------------------------------------------------- render results
+// Only the two things a person actually wants to see after scanning:
+// the items it found, and the total. Everything else (raw OCR text,
+// preprocessing stats, full JSON) stays out of the UI — that's backend
+// detail, not something the user needs to look at.
 function renderResults(data) {
-  const r   = data.receipt;
-  const pre = data.preprocessing;
+  const r = data.receipt;
+<<<<<<< Updated upstream
+=======
+  const totalVal = r.total.value ?? r.items_sum;
+>>>>>>> Stashed changes
 
   const items = r.items.map(i =>
     `<div class="row"><span>${esc(i.name)}</span><span>$${i.price.toFixed(2)}</span></div>`
-  ).join("") || '<div class="row"><span class="label">no items parsed</span></div>';
+  ).join("") || '<div class="row"><span class="label">No items parsed</span></div>';
 
-  const field = (label, obj) => {
-    if (!obj || obj.value == null) return `<div class="row"><span class="label">${label}</span><span>—</span></div>`;
-    const v = typeof obj.value === "number" ? `$${obj.value.toFixed(2)}` : obj.value;
-    return `<div class="row"><span class="label">${label}</span><span>${v} <small class="conf-${obj.confidence}">${obj.confidence}</small></span></div>`;
-  };
+  const saveNote = data.saved_transaction_id
+    ? `<div class="row"><span class="conf-high">✓ Saved to your Finances</span><span><a href="finances.html">view</a></span></div>`
+    : data.save_error
+      ? `<div class="row"><span class="conf-low">${esc(data.save_error)}</span></div>`
+      : "";
 
   resultsEl.innerHTML = `
     <div class="result-box">
-      <h2>Parsed receipt</h2>
-      ${field("Merchant", r.merchant)}
-      ${field("Date", r.date)}
+      <h2>${esc(r.merchant.value || "Receipt")}</h2>
+      ${r.date.value ? `<div class="row"><span class="label">Date</span><span>${esc(r.date.value)}</span></div>` : ""}
       <div class="items">${items}</div>
+<<<<<<< Updated upstream
       ${field("Subtotal", r.subtotal)}
       ${field("Tax", r.tax)}
       ${field("Total", r.total)}
-      <div class="row"><span class="label">Items sum</span><span>$${r.items_sum.toFixed(2)}</span></div>
-      <div class="row"><span class="label">Checksum</span><span class="${r.checksum_ok ? "conf-high" : "conf-low"}">${r.checksum_ok ? "✓ matches" : "✗ mismatch"}</span></div>
-    </div>
-    <div class="result-box">
-      <h2>Preprocessing</h2>
-      <div class="row"><span class="label">Blur score</span><span>${pre.blur_score}</span></div>
-      <div class="row"><span class="label">Receipt detected</span><span>${pre.receipt_detected}</span></div>
-      <div class="row"><span class="label">Rotation applied</span><span>${pre.rotation_applied_deg}°</span></div>
-    </div>
-    <div class="result-box">
-      <h2>OCR confidence: ${data.ocr.mean_confidence}%</h2>
-      <div class="raw-text">${esc(data.ocr.text)}</div>
     </div>
     <div class="result-box">
       <h2>Full JSON (for your teammates)</h2>
       <div class="json-dump">${esc(JSON.stringify(data, null, 2))}</div>
+=======
+      <div class="row"><span class="label">Total</span><span>$${totalVal.toFixed(2)}</span></div>
+      ${saveNote}
+>>>>>>> Stashed changes
     </div>
   `;
-}
-
-function renderRawJSON(data) {
-  resultsEl.innerHTML = `<div class="result-box">
-    <h2>Error response</h2>
-    <div class="json-dump">${esc(JSON.stringify(data, null, 2))}</div>
-  </div>`;
 }
 
 // ----------------------------------------------------- helpers

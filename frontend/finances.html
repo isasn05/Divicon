@@ -2,7 +2,12 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
+<<<<<<< Updated upstream
+<title>Picchi — Finances</title>
+=======
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>ReceiptRoast — Finances</title>
+>>>>>>> Stashed changes
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=IBM+Plex+Mono:wght@400;500;600&family=Inter:wght@400;500;600&display=swap');
 
@@ -380,15 +385,15 @@
       <div class="summary">
         <div class="stat spend">
           <div class="label">This Month</div>
-          <div class="value" id="stat-month">$—</div>
+          <div class="value">$</div>
         </div>
         <div class="stat">
           <div class="label">Receipts</div>
-          <div class="value" id="stat-count">—</div>
+          <div class="value"></div>
         </div>
         <div class="stat">
           <div class="label">Avg / trip</div>
-          <div class="value" id="stat-avg">$—</div>
+          <div class="value">$</div>
         </div>
       </div>
 
@@ -409,8 +414,7 @@
 </div>
 
 <script>
-  // Sample data shown only when no receipts have been saved yet.
-  const SAMPLE_PURCHASES = [
+  const purchases = [
     { date:'Jul 09', place:'Trader Joe\u2019s', sub:'Groceries', amt:62.14 },
     { date:'Jul 08', place:'Shell', sub:'Gas', amt:41.02 },
     { date:'Jul 07', place:'Blue Bottle Coffee', sub:'Coffee', amt:6.75 },
@@ -419,130 +423,16 @@
   ];
 
   const rowsEl = document.getElementById('rows');
-
-  function esc(s) {
-    const d = document.createElement('div');
-    d.textContent = s == null ? '' : String(s);
-    return d.innerHTML;
-  }
-
-  // Receipt amount: prefer the parsed total, fall back to the items sum.
-  function receiptAmount(r) {
-    if (typeof r.total === 'number') return r.total;
-    if (typeof r.items_sum === 'number') return r.items_sum;
-    return 0;
-  }
-
-  // "2026-07-11" (or a saved_at timestamp) -> "Jul 11"
-  function fmtDate(iso) {
-    if (!iso) return '—';
-    const d = new Date(iso.length === 10 ? iso + 'T00:00:00' : iso);
-    if (isNaN(d)) return iso;
-    return d.toLocaleDateString('en-US', { month: 'short', day: '2-digit' });
-  }
-
-  function receiptDate(r) {
-    // Prefer the date printed on the receipt; fall back to when it was saved.
-    const iso = r.date || r.saved_at;
-    if (!iso) return null;
-    const d = new Date(iso.length === 10 ? iso + 'T00:00:00' : iso);
-    return isNaN(d) ? null : d;
-  }
-
-  // ------------------------------------------------ rendering
-  function renderSaved(receipts) {
-    rowsEl.innerHTML = receipts.map(r => {
-      const itemCount = (r.items || []).length;
-      const sub = itemCount === 1 ? '1 item' : `${itemCount} items`;
-      return `
-        <div class="row clickable" tabindex="0" role="link"
-             data-id="${esc(r.id)}"
-             aria-label="Open receipt from ${esc(r.merchant || 'Unknown merchant')}">
-          <div class="date">${esc(fmtDate(r.date || r.saved_at))}</div>
-          <div class="place">${esc(r.merchant || 'Unknown merchant')}<small>${esc(sub)}</small></div>
-          <div class="amt">$${receiptAmount(r).toFixed(2)}</div>
-        </div>`;
-    }).join('');
-
-    // Click / keyboard -> receipt detail page
-    rowsEl.querySelectorAll('.row.clickable').forEach(el => {
-      const go = () => { window.location.href = `receipt.html?id=${encodeURIComponent(el.dataset.id)}`; };
-      el.addEventListener('click', go);
-      el.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); go(); } });
-    });
-  }
-
-  function renderSamples() {
-    rowsEl.innerHTML = SAMPLE_PURCHASES.map(p => `
+  function render(){
+    rowsEl.innerHTML = purchases.map(p => `
       <div class="row">
         <div class="date">${p.date}</div>
         <div class="place">${p.place}<small>${p.sub}</small></div>
         <div class="amt">$${p.amt.toFixed(2)}</div>
       </div>
-    `).join('') + `
-      <div class="empty-note">
-        Sample data — scan a receipt on the <a href="index.html">Upload</a> tab
-        and save it to see it here.
-      </div>`;
+    `).join('');
   }
-
-  // ------------------------------------------------ summary stats
-  function updateStats(entries) {
-    // entries: [{date: Date|null, amt: number}]
-    const now = new Date();
-    const thisMonth = entries.filter(e =>
-      e.date && e.date.getMonth() === now.getMonth() && e.date.getFullYear() === now.getFullYear()
-    );
-    const monthSpend = thisMonth.reduce((s, e) => s + e.amt, 0);
-    const count = entries.length;
-    const totalSpend = entries.reduce((s, e) => s + e.amt, 0);
-    const avg = count ? totalSpend / count : 0;
-
-    document.getElementById('stat-month').textContent = `$${monthSpend.toFixed(2)}`;
-    document.getElementById('stat-count').textContent = count;
-    document.getElementById('stat-avg').textContent = `$${avg.toFixed(2)}`;
-  }
-
-  // ------------------------------------------------ last-scan photo
-  function showLastScanPhoto(receipt) {
-    if (!receipt || !receipt.image_file) return;
-    const img = document.getElementById('last-receipt-img');
-    const tag = document.getElementById('photo-tag');
-    const fallback = img.src;
-    img.onerror = () => { img.onerror = null; img.src = fallback; tag.textContent = ''; };
-    img.src = `/api/receipts/${encodeURIComponent(receipt.id)}/image`;
-    img.alt = `Last scanned receipt from ${receipt.merchant || 'unknown merchant'}`;
-    tag.textContent = 'Last scan';
-  }
-
-  // ------------------------------------------------ load everything
-  async function loadFinances() {
-    let receipts = [];
-    try {
-      const res = await fetch('/api/receipts');
-      if (res.ok) receipts = await res.json();
-    } catch (err) {
-      // Server not reachable (e.g. opened as a plain file) — use samples.
-    }
-
-    if (Array.isArray(receipts) && receipts.length > 0) {
-      renderSaved(receipts);
-      updateStats(receipts.map(r => ({ date: receiptDate(r), amt: receiptAmount(r) })));
-      showLastScanPhoto(receipts[0]);
-      loadRoast(receipts.map(r => ({
-        date: fmtDate(r.date || r.saved_at),
-        place: r.merchant || 'Unknown merchant',
-        sub: `${(r.items || []).length} items`,
-        amt: receiptAmount(r),
-      })));
-    } else {
-      renderSamples();
-      // Samples are undated strings; treat them all as this month.
-      const now = new Date();
-      updateStats(SAMPLE_PURCHASES.map(p => ({ date: now, amt: p.amt })));
-      loadRoast(SAMPLE_PURCHASES);
-    }
-  }
+  render();
 
   //const GOOGLE_API_KEY = "AQ.Ab8RN6J-EkCZWCxpQklhkJYaD7Y5GrxrY3F7FI54RzAgjWSgew"; // Hehe, our funny API key isnt here, dont touch it or anything!
 
