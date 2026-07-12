@@ -2,5 +2,5 @@ opencv-python-headless>=4.9
 pytesseract>=0.3.10
 numpy>=1.26
 firebase-admin
-flask
-flask-cors
+flask>=3.0
+flask-cors>=4.0
