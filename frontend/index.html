@@ -67,7 +67,6 @@
   button:focus-visible { outline: 3px solid var(--fg); outline-offset: 2px; }
 
   .btn-capture { background: var(--accent); color: var(--paper); }
-  .btn-save    { background: var(--ok); color: var(--paper); }
   .btn-retake  { background: var(--line); color: var(--fg); }
   .btn-switch  { background: var(--paper); border: 1px solid var(--line); color: var(--dim); font-size: 0.75rem; padding: 0.5rem 1.2rem; }
 
@@ -118,7 +117,6 @@
 
 <div class="controls">
   <button class="btn-capture" id="btn-capture">Capture</button>
-  <button class="btn-save"    id="btn-save" hidden>Save to finances</button>
   <button class="btn-retake"  id="btn-retake" hidden>Retake</button>
   <button class="btn-switch"  id="btn-switch" title="Toggle front/rear camera">⟲ flip</button>
 </div>
@@ -137,7 +135,6 @@ const canvas    = document.getElementById("canvas");
 const preview   = document.getElementById("preview");
 const vf        = document.getElementById("viewfinder");
 const btnCap    = document.getElementById("btn-capture");
-const btnSave   = document.getElementById("btn-save");
 const btnRetake = document.getElementById("btn-retake");
 const btnSwitch = document.getElementById("btn-switch");
 const fileInput = document.getElementById("file-input");
@@ -146,10 +143,6 @@ const resultsEl = document.getElementById("results");
 
 let stream        = null;
 let facingMode    = "environment";   // start with rear camera
-
-// Kept around so "Save to finances" can send the photo + parsed data.
-let lastDataUrl   = null;
-let lastResult    = null;
 
 // ----------------------------------------------------- camera lifecycle
 async function startCamera() {
@@ -211,10 +204,7 @@ btnCap.addEventListener("click", () => {
 
 btnRetake.addEventListener("click", () => {
   resultsEl.innerHTML = "";
-  lastDataUrl = null;
-  lastResult  = null;
   btnRetake.hidden = true;
-  btnSave.hidden   = true;
   btnCap.hidden    = false;
   startCamera();
 });
@@ -222,37 +212,6 @@ btnRetake.addEventListener("click", () => {
 btnSwitch.addEventListener("click", () => {
   facingMode = facingMode === "environment" ? "user" : "environment";
   startCamera();
-});
-
-// ----------------------------------------------------- save to finances
-btnSave.addEventListener("click", async () => {
-  if (!lastResult || !lastResult.ok) return;
-  btnSave.disabled = true;
-  btnSave.textContent = "Saving…";
-  try {
-    const res = await fetch("/api/receipts", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        image: lastDataUrl,
-        receipt: lastResult.receipt,
-        ocr_confidence: lastResult.ocr?.mean_confidence,
-      }),
-    });
-    const data = await res.json();
-    if (data.ok) {
-      setStatus("Saved! Taking you to finances…");
-      window.location.href = "finances.html";
-    } else {
-      setStatus(`Save failed: ${data.message || data.error || "unknown error"}`, true);
-      btnSave.disabled = false;
-      btnSave.textContent = "Save to finances";
-    }
-  } catch (err) {
-    setStatus(`Save failed: ${err.message}`, true);
-    btnSave.disabled = false;
-    btnSave.textContent = "Save to finances";
-  }
 });
 
 // ----------------------------------------------------- file upload fallback
@@ -275,9 +234,6 @@ async function sendToScanner(dataUrl) {
   btnCap.hidden    = true;
   btnCap.disabled  = true;
   btnRetake.hidden = true;
-  btnSave.hidden   = true;
-  lastDataUrl = dataUrl;
-  lastResult  = null;
 
   try {
     const res  = await fetch("/api/scan", {
@@ -295,20 +251,8 @@ async function sendToScanner(dataUrl) {
       resultsEl.innerHTML = "";
       return;
     }
-<<<<<<< HEAD
-    lastResult = data;
-    btnSave.hidden = false;
-    btnSave.disabled = false;
-    btnSave.textContent = "Save to finances";
-    setStatus(`Done — OCR confidence ${data.ocr.mean_confidence}%. Save it, or retake.`);
-=======
-<<<<<<< Updated upstream
-    setStatus(`Done`);
-=======
 
     setStatus(data.saved_transaction_id ? "Saved to your Finances." : "Scan complete.");
->>>>>>> Stashed changes
->>>>>>> bafecaf8c8a91d4d67b7b5fe8784fcd7ced5e9c7
     renderResults(data);
   } catch (err) {
     setStatus(`Network error: ${err.message}`, true);
@@ -324,10 +268,7 @@ async function sendToScanner(dataUrl) {
 // detail, not something the user needs to look at.
 function renderResults(data) {
   const r = data.receipt;
-<<<<<<< Updated upstream
-=======
   const totalVal = r.total.value ?? r.items_sum;
->>>>>>> Stashed changes
 
   const items = r.items.map(i =>
     `<div class="row"><span>${esc(i.name)}</span><span>$${i.price.toFixed(2)}</span></div>`
@@ -344,18 +285,8 @@ function renderResults(data) {
       <h2>${esc(r.merchant.value || "Receipt")}</h2>
       ${r.date.value ? `<div class="row"><span class="label">Date</span><span>${esc(r.date.value)}</span></div>` : ""}
       <div class="items">${items}</div>
-<<<<<<< Updated upstream
-      ${field("Subtotal", r.subtotal)}
-      ${field("Tax", r.tax)}
-      ${field("Total", r.total)}
-    </div>
-    <div class="result-box">
-      <h2>Full JSON (for your teammates)</h2>
-      <div class="json-dump">${esc(JSON.stringify(data, null, 2))}</div>
-=======
       <div class="row"><span class="label">Total</span><span>$${totalVal.toFixed(2)}</span></div>
       ${saveNote}
->>>>>>> Stashed changes
     </div>
   `;
 }
