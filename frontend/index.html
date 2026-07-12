@@ -251,7 +251,7 @@ async function sendToScanner(dataUrl) {
       renderRawJSON(data);
       return;
     }
-    setStatus(`Done — OCR confidence ${data.ocr.mean_confidence}%`);
+    setStatus(`Done`);
     renderResults(data);
   } catch (err) {
     setStatus(`Network error: ${err.message}`, true);
@@ -262,8 +262,7 @@ async function sendToScanner(dataUrl) {
 
 // ----------------------------------------------------- render results
 function renderResults(data) {
-  const r   = data.receipt;
-  const pre = data.preprocessing;
+  const r = data.receipt;
 
   const items = r.items.map(i =>
     `<div class="row"><span>${esc(i.name)}</span><span>$${i.price.toFixed(2)}</span></div>`
@@ -284,18 +283,6 @@ function renderResults(data) {
       ${field("Subtotal", r.subtotal)}
       ${field("Tax", r.tax)}
       ${field("Total", r.total)}
-      <div class="row"><span class="label">Items sum</span><span>$${r.items_sum.toFixed(2)}</span></div>
-      <div class="row"><span class="label">Checksum</span><span class="${r.checksum_ok ? "conf-high" : "conf-low"}">${r.checksum_ok ? "✓ matches" : "✗ mismatch"}</span></div>
-    </div>
-    <div class="result-box">
-      <h2>Preprocessing</h2>
-      <div class="row"><span class="label">Blur score</span><span>${pre.blur_score}</span></div>
-      <div class="row"><span class="label">Receipt detected</span><span>${pre.receipt_detected}</span></div>
-      <div class="row"><span class="label">Rotation applied</span><span>${pre.rotation_applied_deg}°</span></div>
-    </div>
-    <div class="result-box">
-      <h2>OCR confidence: ${data.ocr.mean_confidence}%</h2>
-      <div class="raw-text">${esc(data.ocr.text)}</div>
     </div>
     <div class="result-box">
       <h2>Full JSON (for your teammates)</h2>
