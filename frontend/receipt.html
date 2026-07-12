@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ReceiptRoast — Receipt</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=IBM+Plex+Mono:wght@400;500;600&family=Inter:wght@400;500;600&display=swap');
+
+  :root{
+    --lavender: #E9C9EA;
+    --lavender-deep: #D9AEDD;
+    --plum: #7A3B94;
+    --ink: #241226;
+    --paper: #FBF6FC;
+    --paper-line: #E4D3E8;
+    --good: #3E7A4F;
+    --warn: #B4791F;
+    --bad: #B4432F;
+  }
+
+  *{box-sizing:border-box; margin:0; padding:0;}
+  body{
+    font-family:'Inter', sans-serif;
+    background: var(--lavender);
+    color: var(--ink);
+    min-height:100vh;
+    display:flex;
+    justify-content:center;
+  }
+  .app{
+    width:100%;
+    max-width:480px;
+    min-height:100vh;
+    display:flex;
+    flex-direction:column;
+  }
+
+  /* ---------- sticky header ---------- */
+  header{
+    position:sticky;
+    top:0;
+    z-index:10;
+    background: var(--paper);
+    border-bottom: 2px solid var(--ink);
+    padding: 14px 16px;
+    display:flex;
+    align-items:center;
+    gap:10px;
+  }
+  .back-link{
+    display:inline-flex;
+    align-items:center;
+    gap:6px;
+    text-decoration:none;
+    color:var(--ink);
+    font-weight:600;
+    font-size:13px;
+    padding:6px 12px;
+    border:2px solid var(--ink);
+    border-radius:999px;
+    background:var(--paper);
+    box-shadow: 2px 2px 0 rgba(36,18,38,0.2);
+    transition: transform .1s ease;
+  }
+  .back-link:active{ transform: translate(1px,1px); box-shadow:1px 1px 0 rgba(36,18,38,0.2); }
+  .back-link:focus-visible{ outline:3px solid var(--ink); outline-offset:2px; }
+  header h1{
+    font-family:'Space Grotesk', sans-serif;
+    font-size:16px;
+    font-weight:700;
+  }
+  header h1 span{ color:var(--plum); }
+
+  main{ padding:18px 16px 40px; flex:1; }
+
+  .card{
+    background: var(--paper);
+    border:2px solid var(--ink);
+    border-radius:14px;
+    box-shadow: 4px 4px 0 rgba(36,18,38,0.15);
+    margin-bottom:16px;
+    overflow:hidden;
+  }
+
+  /* photo */
+  .photo-card{ padding:10px; background:var(--lavender-deep); }
+  .photo-card img{
+    display:block;
+    width:100%;
+    max-height:520px;
+    object-fit:contain;
+    border-radius:8px;
+    background:var(--paper);
+    border:2px solid var(--ink);
+  }
+  .photo-missing{
+    padding:36px 16px;
+    text-align:center;
+    color:var(--ink);
+    font-size:13px;
+    font-weight:500;
+  }
+
+  /* info card styled like a printed receipt */
+  .info{ padding:4px 0 6px; }
+  .info::before, .info::after{
+    content:"";
+    display:block;
+    height:10px;
+    background-image: radial-gradient(circle at 6px 5px, var(--lavender) 5px, transparent 5.5px);
+    background-size: 14px 10px;
+    background-repeat: repeat-x;
+    background-position: -3px 0;
+  }
+  .info h2{
+    font-family:'Space Grotesk', sans-serif;
+    font-size:14px;
+    font-weight:700;
+    padding:10px 16px 2px;
+  }
+  .info .meta{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:11px;
+    color:#8B7690;
+    padding:0 16px 10px;
+    border-bottom:1.5px dashed var(--paper-line);
+  }
+  .line{
+    display:flex;
+    justify-content:space-between;
+    gap:10px;
+    padding:9px 16px;
+    border-bottom:1px dashed var(--paper-line);
+    font-size:13px;
+  }
+  .line:last-child{ border-bottom:none; }
+  .line .label{ color:#8B7690; font-weight:500; }
+  .line .val{
+    font-family:'IBM Plex Mono', monospace;
+    font-weight:600;
+    text-align:right;
+  }
+  .line.item .label{ color:var(--ink); }
+  .line.total .label, .line.total .val{
+    font-weight:700;
+    font-size:14px;
+    color:var(--ink);
+  }
+  .section-label{
+    font-size:10px;
+    font-weight:600;
+    letter-spacing:.05em;
+    text-transform:uppercase;
+    color:var(--plum);
+    padding:10px 16px 2px;
+  }
+  .ok{ color:var(--good); }
+  .warn{ color:var(--warn); }
+  .err{ color:var(--bad); }
+
+  .status{
+    text-align:center;
+    color:#5c4a63;
+    font-family:'IBM Plex Mono', monospace;
+    font-size:12.5px;
+    padding:30px 16px;
+    line-height:1.6;
+  }
+  .status a{ color:var(--plum); font-weight:600; }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <header>
+    <a class="back-link" href="finances.html">&larr; Finances</a>
+    <h1><span>Receipt</span> details</h1>
+  </header>
+
+  <main>
+    <div id="content">
+      <p class="status">Loading receipt…</p>
+    </div>
+  </main>
+</div>
+
+<script>
+  const contentEl = document.getElementById('content');
+
+  function esc(s) {
+    const d = document.createElement('div');
+    d.textContent = s == null ? '' : String(s);
+    return d.innerHTML;
+  }
+
+  function money(v) {
+    return typeof v === 'number' ? `$${v.toFixed(2)}` : '—';
+  }
+
+  function fmtLongDate(iso) {
+    if (!iso) return '—';
+    const d = new Date(iso.length === 10 ? iso + 'T00:00:00' : iso);
+    if (isNaN(d)) return iso;
+    return d.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+  }
+
+  function render(r) {
+    const photo = r.image_file
+      ? `<img src="/api/receipts/${encodeURIComponent(r.id)}/image"
+              alt="Photo of receipt from ${esc(r.merchant || 'unknown merchant')}"
+              onerror="this.parentElement.innerHTML='<div class=&quot;photo-missing&quot;>Photo unavailable.</div>'">`
+      : `<div class="photo-missing">No photo was saved with this receipt.</div>`;
+
+    const items = (r.items || []).map(i => `
+      <div class="line item">
+        <span class="label">${esc(i.name)}</span>
+        <span class="val">${money(i.price)}</span>
+      </div>`).join('') ||
+      `<div class="line"><span class="label">No line items were parsed.</span></div>`;
+
+    const checksum = r.checksum_ok
+      ? `<span class="val ok">&#10003; items match total</span>`
+      : `<span class="val err">&#10007; items don't match total</span>`;
+
+    const conf = typeof r.ocr_confidence === 'number'
+      ? `<div class="line"><span class="label">OCR confidence</span><span class="val">${r.ocr_confidence}%</span></div>`
+      : '';
+
+    contentEl.innerHTML = `
+      <div class="card photo-card">${photo}</div>
+
+      <div class="card">
+        <div class="info">
+          <h2>${esc(r.merchant || 'Unknown merchant')}</h2>
+          <div class="meta">${esc(fmtLongDate(r.date))} &middot; saved ${esc(fmtLongDate(r.saved_at))}</div>
+
+          <div class="section-label">Items</div>
+          ${items}
+
+          <div class="section-label">Totals</div>
+          <div class="line"><span class="label">Items sum</span><span class="val">${money(r.items_sum)}</span></div>
+          <div class="line"><span class="label">Subtotal</span><span class="val">${money(r.subtotal)}</span></div>
+          <div class="line"><span class="label">Tax</span><span class="val">${money(r.tax)}</span></div>
+          <div class="line total"><span class="label">Total</span><span class="val">${money(r.total)}</span></div>
+
+          <div class="section-label">Scan quality</div>
+          <div class="line"><span class="label">Checksum</span>${checksum}</div>
+          ${conf}
+        </div>
+      </div>
+    `;
+  }
+
+  async function load() {
+    const id = new URLSearchParams(window.location.search).get('id');
+    if (!id) {
+      contentEl.innerHTML = `<p class="status">No receipt selected.<br>
+        <a href="finances.html">Back to finances</a></p>`;
+      return;
+    }
+    try {
+      const res = await fetch(`/api/receipts/${encodeURIComponent(id)}`);
+      if (!res.ok) {
+        contentEl.innerHTML = `<p class="status">Receipt not found — it may have been deleted.<br>
+          <a href="finances.html">Back to finances</a></p>`;
+        return;
+      }
+      render(await res.json());
+    } catch (err) {
+      contentEl.innerHTML = `<p class="status">Couldn't reach the server (${esc(err.message)}).<br>
+        Make sure server.py is running, then reload.</p>`;
+    }
+  }
+
+  load();
+</script>
+</body>
+</html>
