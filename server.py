@@ -66,6 +66,9 @@
 Camera test server - Windows compatible
 """
 
+import os
+from flask_cors import CORS
+
 import base64
 import json
 import shutil
@@ -107,6 +110,7 @@ except Exception as exc:
     print(f"[db] not connected ({exc}) — receipts will scan but won't be saved.")
 
 app = Flask(__name__, static_folder="frontend", static_url_path="")
+CORS(app)
 
 # Define where frontend files are located
 FRONTEND_DIR = Path(__file__).resolve().parent / "frontend"
@@ -199,4 +203,4 @@ if __name__ == "__main__":
     print("Finances page: http://localhost:5000")
     # print("Scanner page: http://localhost:5000/scanner")
     # print("On phone: http://172.20.10.12:5000 (if on same network)\n")
-    app.run(debug=True, host="0.0.0.0", port=5000)
+app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)), threaded=True)
